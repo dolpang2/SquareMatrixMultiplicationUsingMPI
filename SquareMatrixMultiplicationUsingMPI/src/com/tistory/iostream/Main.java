@@ -29,7 +29,8 @@ public class Main {
     intsize, /* size of an integer in bytes */
     dbsize, /* size of a double float in bytes */
     averow, extra, /* used to determine rows sent to each worker */
-    i, j, k, /* misc */
+    //i, j, k, 
+    /* misc */
     count;
     int[] a = new int[N * N]; /* matrix A to be multiplied */
     int[] b = new int[N * N]; /* matrix B to be multiplied */
@@ -47,8 +48,8 @@ public class Main {
     /* *************** Master Task ****************** */
     if (taskid == MASTER) {
       // Init matrix A,B
-      for (i = 0; i < N; i++) {
-        for (j = 0; j < N; j++) {
+      for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
           a[(i * N) + j] = 1;
           b[(i * N) + j] = 2;
         }
@@ -80,7 +81,7 @@ public class Main {
       // Wait for results from all worker tasks
       computeTime[0] = 0;
       mtype = FROM_WORKER;
-      for (i = 1; i <= numworkers; i++) {
+      for (int i = 1; i <= numworkers; i++) {
         source = i;
         MPI.COMM_WORLD.Recv(computeTime, 0, 1, MPI.LONG, source, mtype);
         System.out.println("Rank " + i + " uses " + computeTime[0] + " for computing");
@@ -107,10 +108,10 @@ public class Main {
       MPI.COMM_WORLD.Recv(b, 0, count, MPI.INT, source, mtype);
 
       long startCompute = System.currentTimeMillis();
-      for (i = 0; i < rows[0]; i++) {
-        for (k = 0; k < N; k++) {
+      for (int i = 0; i < rows[0]; i++) {
+        for (int k = 0; k < N; k++) {
           c[(i * N) + k] = 0;
-          for (j = 0; j < N; j++) {
+          for (int j = 0; j < N; j++) {
             c[(i * N) + k] = c[(i * N) + k] + a[(i * N) + j] * b[(j * N) + k];
           }
         }
