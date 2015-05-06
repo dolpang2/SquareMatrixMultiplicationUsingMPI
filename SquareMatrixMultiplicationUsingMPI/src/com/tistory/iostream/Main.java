@@ -24,12 +24,9 @@ public class Main {
     numworkers, /* number of worker tasks */
     source, /* task id of message source */
     dest, /* task id of message destination */
-    nbytes, /* number of bytes in message */
     mtype, /* message type */
-    intsize, /* size of an integer in bytes */
-    dbsize, /* size of a double float in bytes */
     averow, extra, /* used to determine rows sent to each worker */
-    //i, j, k, 
+
     /* misc */
     count;
     int[] a = new int[N * N]; /* matrix A to be multiplied */
