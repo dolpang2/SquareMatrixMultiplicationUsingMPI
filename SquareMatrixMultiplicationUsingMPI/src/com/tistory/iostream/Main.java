@@ -19,7 +19,6 @@ public class Main {
     int MASTER = 0;
     int FROM_MASTER = 1;
     int FROM_WORKER = 2;
-    
     int numtasks, /* number of tasks in partition */
     taskid, /* a task identifier */
     numworkers, /* number of worker tasks */
