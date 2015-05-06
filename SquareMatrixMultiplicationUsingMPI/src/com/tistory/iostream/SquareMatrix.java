@@ -44,4 +44,11 @@ public class SquareMatrix {
   public int[] getMatrix() {
     return matrix;
   }
+
+  /**
+   * @return the sizeOfMatrix
+   */
+  public int getSizeOfMatrix() {
+    return sizeOfMatrix;
+  }
 }
