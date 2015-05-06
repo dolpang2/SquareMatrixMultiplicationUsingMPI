@@ -24,7 +24,6 @@ public class Main {
   private static void runMultiplication(String[] args) {
     int sizeOfMatrix = 1500;
     int /* number of tasks in partition */
-    source, /* task id of message source */
     messageType, /* message type */
     averow, extra, /* used to determine rows sent to each worker */
 
@@ -49,8 +48,6 @@ public class Main {
     int numOfTasks = MPI.COMM_WORLD.Size();
     int numOfWorkers = numOfTasks - 1;
 
-    int[] convertedMatrixA = matrixA.getMatrix();
-    int[] convertedMatrixB = matrixB.getMatrix();
     int[] convertedResultMatrix = resultMatrix.getMatrix();
     /* *************** Master Task ****************** */
     if (currentTaskID == MessageTag.MASTER.getValue()) {
@@ -62,37 +59,24 @@ public class Main {
       messageType = MessageTag.FROM_MASTER.getValue();
 
       long startsend = System.currentTimeMillis();
-      for (int dest = 1; dest <= numOfWorkers; dest++) {
-        if (dest <= extra) {
-          rows[0] = averow + 1;
-        } else {
-          rows[0] = averow;
-        }
-        MPI.COMM_WORLD.Send(offset, 0, 1, MPI.INT, dest, messageType);
-        MPI.COMM_WORLD.Send(rows, 0, 1, MPI.INT, dest, messageType);
-        count = rows[0] * sizeOfMatrix;
-        MPI.COMM_WORLD.Send(convertedMatrixA, (offset[0] * sizeOfMatrix), count, MPI.INT, dest,
-            messageType);
-        count = sizeOfMatrix * sizeOfMatrix;
-        MPI.COMM_WORLD.Send(convertedMatrixB, 0, count, MPI.INT, dest, messageType);
-        offset[0] = offset[0] + rows[0];
-      }
+      masterSendTask(matrixA, matrixB, offset, rows, numOfWorkers);
       long stopsend = System.currentTimeMillis();
       // Wait for results from all worker tasks
       computeTime[0] = 0;
       messageType = MessageTag.FROM_WORKER.getValue();
       for (int i = 1; i <= numOfWorkers; i++) {
-        source = i;
-        MPI.COMM_WORLD.Recv(computeTime, 0, 1, MPI.LONG, source, messageType);
+        int idOfWorker = i;
+
+        MPI.COMM_WORLD.Recv(computeTime, 0, 1, MPI.LONG, idOfWorker, messageType);
         System.out.println("Rank " + i + " uses " + computeTime[0] + " for computing");
-        MPI.COMM_WORLD.Recv(offset, 0, 1, MPI.INT, source, messageType);
-        MPI.COMM_WORLD.Recv(rows, 0, 1, MPI.INT, source, messageType);
+        MPI.COMM_WORLD.Recv(offset, 0, 1, MPI.INT, idOfWorker, messageType);
+        MPI.COMM_WORLD.Recv(rows, 0, 1, MPI.INT, idOfWorker, messageType);
         count = rows[0] * sizeOfMatrix;
         MPI.COMM_WORLD.Recv(convertedResultMatrix, offset[0] * sizeOfMatrix, count, MPI.INT,
-            source, messageType);
+            idOfWorker, messageType);
       }
       long stop = System.currentTimeMillis();
-      // System.out.println("Result of matrix c[0] = " + c[0] + ", c[1000*1000] = " + c[100*100]);
+
       System.out.println("Time Usage = " + (stop - start));
       System.out.println("Sending Time Usage = " + (stopsend - startsend));
     }
@@ -116,6 +100,33 @@ public class Main {
     MPI.Finalize();
   }
 
+  private static void masterSendTask(SquareMatrix a, SquareMatrix b, int[] offset, int[] rows,
+      int numOfWorkers) {
+    int[] convertedMatrixA = a.getMatrix();
+    int[] convertedMatrixB = b.getMatrix();
+    int messageType = MessageTag.FROM_MASTER.getValue();
+    int sizeOfMatrix = a.getSizeOfMatrix();
+    int numOfAverageRow = sizeOfMatrix / numOfWorkers;
+    int numOfRemainderRow = sizeOfMatrix % numOfWorkers;
+    int sendingSize;
+    
+    for (int dest = 1; dest <= numOfWorkers; dest++) {
+      if (dest <= numOfRemainderRow) {
+        rows[0] = numOfAverageRow + 1;
+      } else {
+        rows[0] = numOfAverageRow;
+      }
+      MPI.COMM_WORLD.Send(offset, 0, 1, MPI.INT, dest, messageType);
+      MPI.COMM_WORLD.Send(rows, 0, 1, MPI.INT, dest, messageType);
+      sendingSize = rows[0] * sizeOfMatrix;
+      MPI.COMM_WORLD.Send(convertedMatrixA, (offset[0] * sizeOfMatrix), sendingSize, MPI.INT, dest,
+          messageType);
+      sendingSize = sizeOfMatrix * sizeOfMatrix;
+      MPI.COMM_WORLD.Send(convertedMatrixB, 0, sendingSize, MPI.INT, dest, messageType);
+      offset[0] = offset[0] + rows[0];
+    }
+  }
+
   /**
    * @param resultMatrix
    * @param offset
@@ -127,7 +138,7 @@ public class Main {
     int messageType = MessageTag.FROM_WORKER.getValue();
     int sizeOfMatrix = resultMatrix.getSizeOfMatrix();
     int[] convertedResultMatrix = resultMatrix.getMatrix();
-    
+
     MPI.COMM_WORLD.Send(computeTime, 0, 1, MPI.LONG, MessageTag.MASTER.getValue(), messageType);
     MPI.COMM_WORLD.Send(offset, 0, 1, MPI.INT, MessageTag.MASTER.getValue(), messageType);
     MPI.COMM_WORLD.Send(rows, 0, 1, MPI.INT, MessageTag.MASTER.getValue(), messageType);
