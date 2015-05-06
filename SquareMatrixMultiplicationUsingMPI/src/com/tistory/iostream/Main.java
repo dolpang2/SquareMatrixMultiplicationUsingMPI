@@ -16,9 +16,6 @@ public class Main {
    */
   public static void main(String[] args) {
     int N = 1500;
-    int MASTER = 0;
-    int FROM_MASTER = 1;
-    int FROM_WORKER = 2;
     int numtasks, /* number of tasks in partition */
     taskid, /* a task identifier */
     numworkers, /* number of worker tasks */
@@ -43,7 +40,7 @@ public class Main {
     numworkers = numtasks - 1;
 
     /* *************** Master Task ****************** */
-    if (taskid == MASTER) {
+    if (taskid == MessageTag.MASTER.getValue()) {
       // Init matrix A,B
       for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
@@ -57,7 +54,7 @@ public class Main {
       averow = N / numworkers;
       extra = N % numworkers;
       offset[0] = 0;
-      mtype = FROM_MASTER;
+      mtype = MessageTag.FROM_MASTER.getValue();
 
       long startsend = System.currentTimeMillis();
       for (dest = 1; dest <= numworkers; dest++) {
@@ -77,7 +74,7 @@ public class Main {
       long stopsend = System.currentTimeMillis();
       // Wait for results from all worker tasks
       computeTime[0] = 0;
-      mtype = FROM_WORKER;
+      mtype = MessageTag.FROM_WORKER.getValue();
       for (int i = 1; i <= numworkers; i++) {
         source = i;
         MPI.COMM_WORLD.Recv(computeTime, 0, 1, MPI.LONG, source, mtype);
@@ -94,9 +91,9 @@ public class Main {
     }
 
     /* *************************** worker task *********************************** */
-    if (taskid > MASTER) {
-      mtype = FROM_MASTER;
-      source = MASTER;
+    if (taskid > MessageTag.MASTER.getValue()) {
+      mtype = MessageTag.FROM_MASTER.getValue();
+      source = MessageTag.MASTER.getValue();
       MPI.COMM_WORLD.Recv(offset, 0, 1, MPI.INT, source, mtype);
       MPI.COMM_WORLD.Recv(rows, 0, 1, MPI.INT, source, mtype);
       count = rows[0] * N;
@@ -115,11 +112,11 @@ public class Main {
       }
       long stopCompute = System.currentTimeMillis();
       computeTime[0] = (stopCompute - startCompute);
-      mtype = FROM_WORKER;
-      MPI.COMM_WORLD.Send(computeTime, 0, 1, MPI.LONG, MASTER, mtype);
-      MPI.COMM_WORLD.Send(offset, 0, 1, MPI.INT, MASTER, mtype);
-      MPI.COMM_WORLD.Send(rows, 0, 1, MPI.INT, MASTER, mtype);
-      MPI.COMM_WORLD.Send(c, 0, rows[0] * N, MPI.INT, MASTER, mtype);
+      mtype = MessageTag.FROM_WORKER.getValue();
+      MPI.COMM_WORLD.Send(computeTime, 0, 1, MPI.LONG, MessageTag.MASTER.getValue(), mtype);
+      MPI.COMM_WORLD.Send(offset, 0, 1, MPI.INT, MessageTag.MASTER.getValue(), mtype);
+      MPI.COMM_WORLD.Send(rows, 0, 1, MPI.INT, MessageTag.MASTER.getValue(), mtype);
+      MPI.COMM_WORLD.Send(c, 0, rows[0] * N, MPI.INT, MessageTag.MASTER.getValue(), mtype);
     }
 
     MPI.COMM_WORLD.Reduce(computeTime, 0, maxComputeTime, 0, 1, MPI.LONG, MPI.MAX, 0);
