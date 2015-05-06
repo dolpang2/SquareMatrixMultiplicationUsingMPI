@@ -23,13 +23,6 @@ public class Main {
    */
   private static void runMultiplication(String[] args) {
     int sizeOfMatrix = 1500;
-    int /* number of tasks in partition */
-    messageType, /* message type */
-    averow, extra, /* used to determine rows sent to each worker */
-
-    /* misc */
-    count;
-
 
     SquareMatrix matrixA = new SquareMatrix(sizeOfMatrix);
     SquareMatrix matrixB = new SquareMatrix(sizeOfMatrix);
@@ -41,44 +34,28 @@ public class Main {
     long[] computeTime = new long[1];
     long[] maxComputeTime = new long[1];
 
-
-
     MPI.Init(args);
     int currentTaskID = MPI.COMM_WORLD.Rank();
     int numOfTasks = MPI.COMM_WORLD.Size();
     int numOfWorkers = numOfTasks - 1;
 
-    int[] convertedResultMatrix = resultMatrix.getMatrix();
     /* *************** Master Task ****************** */
     if (currentTaskID == MessageTag.MASTER.getValue()) {
       // Send matrix data to worker tasks
       long start = System.currentTimeMillis();
-      averow = sizeOfMatrix / numOfWorkers;
-      extra = sizeOfMatrix % numOfWorkers;
       offset[0] = 0;
-      messageType = MessageTag.FROM_MASTER.getValue();
 
-      long startsend = System.currentTimeMillis();
+      long startTimeOfSend = System.currentTimeMillis();
       masterSendTask(matrixA, matrixB, offset, rows, numOfWorkers);
-      long stopsend = System.currentTimeMillis();
+      long endTimeOfSend = System.currentTimeMillis();
       // Wait for results from all worker tasks
       computeTime[0] = 0;
-      messageType = MessageTag.FROM_WORKER.getValue();
-      for (int i = 1; i <= numOfWorkers; i++) {
-        int idOfWorker = i;
 
-        MPI.COMM_WORLD.Recv(computeTime, 0, 1, MPI.LONG, idOfWorker, messageType);
-        System.out.println("Rank " + i + " uses " + computeTime[0] + " for computing");
-        MPI.COMM_WORLD.Recv(offset, 0, 1, MPI.INT, idOfWorker, messageType);
-        MPI.COMM_WORLD.Recv(rows, 0, 1, MPI.INT, idOfWorker, messageType);
-        count = rows[0] * sizeOfMatrix;
-        MPI.COMM_WORLD.Recv(convertedResultMatrix, offset[0] * sizeOfMatrix, count, MPI.INT,
-            idOfWorker, messageType);
-      }
+      masterReceiveTask(resultMatrix, offset, rows, computeTime, numOfWorkers);
       long stop = System.currentTimeMillis();
 
       System.out.println("Time Usage = " + (stop - start));
-      System.out.println("Sending Time Usage = " + (stopsend - startsend));
+      System.out.println("Sending Time Usage = " + (endTimeOfSend - startTimeOfSend));
     }
 
     /* *************************** worker task *********************************** */
@@ -100,6 +77,26 @@ public class Main {
     MPI.Finalize();
   }
 
+  private static void masterReceiveTask(SquareMatrix resultMatrix, int[] offset, int[] rows,
+      long[] computeTime, int numOfWorkers) {
+    int[] convertedResultMatrix = resultMatrix.getMatrix();
+    int messageType = MessageTag.FROM_WORKER.getValue();
+    int sizeOfMatrix = resultMatrix.getSizeOfMatrix();
+    int count;
+
+    for (int i = 1; i <= numOfWorkers; i++) {
+      int idOfWorker = i;
+
+      MPI.COMM_WORLD.Recv(computeTime, 0, 1, MPI.LONG, idOfWorker, messageType);
+      System.out.println("Rank " + i + " uses " + computeTime[0] + " for computing");
+      MPI.COMM_WORLD.Recv(offset, 0, 1, MPI.INT, idOfWorker, messageType);
+      MPI.COMM_WORLD.Recv(rows, 0, 1, MPI.INT, idOfWorker, messageType);
+      count = rows[0] * sizeOfMatrix;
+      MPI.COMM_WORLD.Recv(convertedResultMatrix, offset[0] * sizeOfMatrix, count, MPI.INT,
+          idOfWorker, messageType);
+    }
+  }
+
   private static void masterSendTask(SquareMatrix a, SquareMatrix b, int[] offset, int[] rows,
       int numOfWorkers) {
     int[] convertedMatrixA = a.getMatrix();
@@ -109,7 +106,7 @@ public class Main {
     int numOfAverageRow = sizeOfMatrix / numOfWorkers;
     int numOfRemainderRow = sizeOfMatrix % numOfWorkers;
     int sendingSize;
-    
+
     for (int dest = 1; dest <= numOfWorkers; dest++) {
       if (dest <= numOfRemainderRow) {
         rows[0] = numOfAverageRow + 1;
