@@ -8,5 +8,5 @@ package com.tistory.iostream;
  *
  */
 public enum MessageTag {
-
+  MASTER, FROM_MASTER, FROM_WORKER
 }
