@@ -1,8 +1,3 @@
-/**
- * 
- */
-
-
 import java.util.Random;
 
 /**
@@ -48,7 +43,7 @@ public class SquareMatrix {
   /**
    * @return the sizeOfMatrix
    */
-  public int getSizeOfMatrix() {
+  public int getSize() {
     return sizeOfMatrix;
   }
 }
