@@ -1,7 +1,7 @@
 /**
  * 
  */
-package com.tistory.iostream;
+
 
 import java.util.Random;
 
